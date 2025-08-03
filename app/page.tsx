@@ -16,8 +16,6 @@ import {
 // Your actual credentials — move to env vars later
 const GOOGLE_CLIENT_ID =
   '954748761187-936nb9vpc10rspeh1gjo1r4lb8dd48dv.apps.googleusercontent.com'
-const HUBSPOT_TOKEN =
-  process.env.NEXT_PUBLIC_HUBSPOT_TOKEN;
 
 // Google Calendar API configuration
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3'
