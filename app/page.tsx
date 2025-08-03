@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, RefreshCw, User, AlertTriangle, CheckCircle, ExternalLink, Send, LogOut } from 'lucide-react';
 
-// Your actual credentials - these will work in production
+// Your actual credentials - move to environment variables later for security
 const GOOGLE_CLIENT_ID = '954748761187-936nb9vpc10rspeh1gjo1r4lb8dd48dv.apps.googleusercontent.com';
-const HUBSPOT_TOKEN = 'pat-na1-d5ab7523-c97a-4dda-b90f-d27b095b2fc9';
+const HUBSPOT_TOKEN = process.env.NEXT_PUBLIC_HUBSPOT_TOKEN || 'pat-na1-d5ab7523-c97a-4dda-b90f-d27b095b2fc9';
 
 // Google Calendar API configuration
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
@@ -130,11 +130,7 @@ const LoginForm = ({ onLogin, isLoading, error }: any) => {
           </button>
           
           <div className="text-xs text-gray-500 text-center">
-            <p>This will give the app access to:</p>
-            <ul className="mt-1 space-y-1">
-              <li>• Your Google Calendar (to show coaching appointments)</li>
-              <li>• Your basic profile info (name, email, photo)</li>
-            </ul>
+            <p>This will give the app access to your Google Calendar</p>
           </div>
         </div>
       </div>
@@ -473,13 +469,11 @@ export default function CoachingDashboard() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <DowJanesLogo />
 
           <div className="flex items-center space-x-6">
-            {/* Current User Display */}
             <div className="flex items-center space-x-3 text-sm text-gray-600">
               <img 
                 src={currentUser.picture || 'https://via.placeholder.com/32'} 
@@ -492,7 +486,6 @@ export default function CoachingDashboard() {
               </div>
             </div>
 
-            {/* Date Navigation */}
             <div className="flex items-center space-x-2">
               <button 
                 onClick={() => navigateDate('prev')}
@@ -509,7 +502,6 @@ export default function CoachingDashboard() {
               </button>
             </div>
 
-            {/* View Toggle */}
             <select 
               value={selectedView}
               onChange={(e) => setSelectedView(e.target.value)}
@@ -522,7 +514,153 @@ export default function CoachingDashboard() {
               ))}
             </select>
 
-            {/* Refresh Button */}
             <button 
               className="flex items-center space-x-2 text-white px-4 py-2 rounded-lg transition-colors" 
-              style={{
+              style={{backgroundColor: '#C8BAEE'}}
+              onClick={loadAppointments}
+              disabled={loadingAppointments}
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingAppointments ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+
+            <button 
+              onClick={handleLogout}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {error && (
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loadingAppointments && (
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-center space-x-3 text-gray-600">
+            <RefreshCw className="w-6 h-6 animate-spin" />
+            <span>Loading appointments from Google Calendar...</span>
+          </div>
+        </div>
+      )}
+
+      {!loadingAppointments && (
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <div className="space-y-6">
+            {appointments.length > 0 && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>
+                    <strong>Google Calendar + HubSpot Connected!</strong> Showing {appointments.length} coaching appointment{appointments.length !== 1 ? 's' : ''} for {currentDate} with enriched client data.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {filteredAppointments.length > 0 ? (
+              filteredAppointments.map((appointment) => (
+                <div key={appointment.id} className={`bg-white rounded-lg shadow-sm border ${getCoachColor(appointment.coach)} hover:shadow-md transition-shadow`}>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <span className="text-lg font-semibold text-gray-900">{appointment.time}</span>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Coach: <span className="font-medium">{appointment.coach}</span></span>
+                          </div>
+                          
+                          <div className="text-xl font-semibold text-gray-900">{appointment.client}</div>
+                          <div className="text-sm text-gray-600">{appointment.email}</div>
+                          <div className="text-sm text-teal-700 font-medium">{appointment.programs}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="text-sm text-gray-700">
+                        <span className="font-medium">Focus:</span> "{appointment.focus}"
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button 
+                        onClick={() => setExpandedCard(expandedCard === appointment.id ? null : appointment.id)}
+                        className="text-white px-4 py-2 rounded-lg transition-colors text-sm" 
+                        style={{backgroundColor: '#C8BAEE'}}
+                      >
+                        {expandedCard === appointment.id ? 'Collapse' : 'Expand HubSpot Briefing'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {expandedCard === appointment.id && (
+                    <div className="border-t border-gray-200 bg-gray-50">
+                      <div className="p-6 space-y-6">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">Today's Focus</h3>
+                          <div className="bg-white p-4 rounded-lg border">
+                            <p className="text-gray-700">{appointment.briefing.todaysFocus}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">Recent Context</h3>
+                          <div className="bg-white p-4 rounded-lg border">
+                            <p className="text-gray-700">{appointment.briefing.recentContext}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">Client Overview</h3>
+                          <div className="bg-white p-4 rounded-lg border">
+                            <p className="text-gray-700 mb-3">{appointment.briefing.clientOverview}</p>
+                            <a 
+                              href={appointment.briefing.hubspotUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-2 text-teal-700 hover:text-teal-800 text-sm font-medium"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span>View Full HubSpot Profile</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No coaching calls scheduled</h3>
+                <p className="text-gray-600">
+                  No appointments found with "coaching" in the title or description for {currentDate}.
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Make sure your calendar events include the word "coaching" to appear here.
+                </p>
+              </div>
+            )}
+          </div>
+        </main>
+      )}
+    </div>
+  );
+}
